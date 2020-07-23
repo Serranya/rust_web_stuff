@@ -15,7 +15,6 @@ struct Request<'a> {
     buf: &'a [u8],
 }
 
-#[derive(Debug)]
 struct RequestLine {
     method: (usize, usize),
     uri: (usize, usize),
@@ -56,7 +55,6 @@ impl fmt::Display for Request<'_> {
     }
 }
 
-#[derive(Debug)]
 struct HeaderField {
     name: (usize, usize),
     value: (usize, usize),
@@ -130,7 +128,8 @@ impl Iterator for MyReader<'_> {
         } else {
             return None;
         }
-        self.pos += 1; // TODO check for overflow or max size
+        debug_assert!(self.pos + 1 <= self.buf.len(), "tried to advance past buffer size");
+        self.pos += 1;
         ret
     }
 }
@@ -173,10 +172,8 @@ fn run() -> i32 {
 
 fn parse<'a>(bytes: &'a mut MyReader) -> Result<Request<'a>, Error> {
     let req_line = parse_request_line(bytes)?;
-    println!("{:?}", req_line);
 
     let headers = parse_headers(bytes, req_line.version.1)?;
-    println!("{:?}", headers);
 
     // TODO skipp LWS
 
@@ -215,7 +212,6 @@ fn parse_headers(bytes: &mut MyReader, start: usize) -> Result<Vec<HeaderField>,
         }
         let header = parse_header(bytes, start + chomped)?;
         start = header.value.1;
-        println!("Found header: {:?}", header);
         headers.push(header);
     }
 }
@@ -241,7 +237,7 @@ fn read_header_name(bytes: &mut MyReader, start: usize) -> Result<(usize, usize)
     ))
 }
 
-// does not handle line continuations yet..
+// TODO does not handle line continuations yet..
 fn read_header_value(bytes: &mut MyReader, start: usize) -> Result<(usize, usize), Error> {
     for (i, byte) in bytes.enumerate() {
         let byte = byte?;
